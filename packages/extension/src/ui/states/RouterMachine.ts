@@ -17,10 +17,12 @@ import {
 import {
   getActions,
   getLastSelectedWallet,
+  getLocalhostPort,
   getWallets,
   hasActiveSession,
   isInitialized,
   monitorProgress,
+  setLocalhostPort,
   startSession,
   uploadKeystore,
 } from "../utils/messaging"
@@ -125,11 +127,8 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
     context: {
       wallets: {},
       networkId: defaultNetwork.id,
-      localhostPort: (() => {
-        const port = parseInt(localStorage.port)
-        return !port || isNaN(port) ? 5000 : port
-      })(),
       actions: [],
+      localhostPort: 5000,
       isPopup: closeAfterActions,
     },
     states: {
@@ -243,17 +242,20 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
         invoke: {
           src: async () => {
             const { network } = await getLastSelectedWallet()
+            const port = await getLocalhostPort()
 
             if (!network) throw Error("No network stored")
 
             return {
               networkId: network,
+              localhostPort: port,
             }
           },
           onDone: {
             target: "recover",
             actions: assign((_, ev) => ({
               networkId: ev.data.networkId,
+              localhostPort: ev.data.localhostPort,
             })),
           },
           onError: "recover",
@@ -335,8 +337,7 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
             if (event.type === "GENERATE_L1")
               await startSession(event.data.password)
 
-            const network = localNetworkUrl(ctx.networkId, ctx.localhostPort)
-            const newWallet = await Wallet.fromDeploy(network)
+            const newWallet = await Wallet.fromDeploy(ctx.networkId)
 
             useProgress.setState({ progress: 0, text: "" })
 
@@ -355,6 +356,9 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
               },
             })),
           },
+          onError: {
+            target: "accountList",
+          },
         },
       },
       account: {
@@ -363,7 +367,7 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
             type: "WALLET_CONNECTED",
             data: {
               address: ctx.selectedWallet!,
-              network: localNetworkUrl(ctx.networkId, ctx.localhostPort),
+              network: ctx.networkId,
             },
           })
         },
@@ -473,10 +477,10 @@ export const createRouterMachine = (closeAfterActions?: boolean) =>
           CHANGE_PORT: {
             target: "settings",
             actions: [
-              assign((ctx, { data }) => {
-                localStorage.setItem("port", `${data}`)
-                return { ...ctx, localhostPort: data }
-              }),
+              (_, { data }) => {
+                return setLocalhostPort(data)
+              },
+              assign((ctx, { data }) => ({ ...ctx, localhostPort: data })),
             ],
           },
         },

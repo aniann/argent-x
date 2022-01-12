@@ -13,6 +13,16 @@ if (process.env.NODE_ENV === "development") {
   })
 }
 
+export const getLocalhostPort = async () => {
+  sendMessage({ type: "GET_LOCALHOST_PORT" })
+  const { port } = await waitForMessage("GET_LOCALHOST_PORT_RES")
+  return port
+}
+
+export const setLocalhostPort = async (port: number) => {
+  sendMessage({ type: "SET_LOCALHOST_PORT", data: { port } })
+}
+
 export const getActions = async () => {
   sendMessage({ type: "GET_ACTIONS" })
   return waitForMessage("GET_ACTIONS_RES")

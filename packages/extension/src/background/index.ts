@@ -24,7 +24,7 @@ import { sentTransactionNotification } from "./notification"
 import { openUi } from "./openUi"
 import { selectedWalletStore } from "./selectedWallet"
 import { getSigner } from "./signer"
-import { setToStorage } from "./storage"
+import { Storage, setToStorage } from "./storage"
 import { TransactionTracker, getTransactionStatus } from "./trackTransactions"
 import { addToWhitelist, isOnWhitelist } from "./whitelist"
 
@@ -35,6 +35,13 @@ async function getCurrentTab() {
 function setActiveTab(tabId?: number) {
   activeTabId = tabId
 }
+
+const portStore = new Storage(
+  {
+    port: 5000,
+  },
+  "PORT",
+)
 
 async function main() {
   const { privateKey, publicKeyJwk } = await getKeyPair()
@@ -88,6 +95,24 @@ async function main() {
     switch (msg.type) {
       case "OPEN_UI": {
         return openUi()
+      }
+
+      case "SET_LOCALHOST_PORT": {
+        const { port } = msg.data
+        return await portStore.setItem("port", port)
+      }
+
+      case "GET_LOCALHOST_PORT": {
+        const port = await portStore.getItem("port")
+
+        if (!port) {
+          throw new Error("No port set")
+        }
+
+        return sendToTabAndUi({
+          type: "GET_LOCALHOST_PORT_RES",
+          data: { port },
+        })
       }
 
       case "GET_TRANSACTIONS": {
@@ -392,7 +417,12 @@ async function main() {
         if (!isUnlocked()) throw Error("you need an open session")
 
         const network = msg.data
-        const newAccount = await createAccount(network)
+        let newAccount
+        try {
+          newAccount = await createAccount(network)
+        } catch {
+          return sendToTabAndUi({ type: "NEW_ACCOUNT_REJ" })
+        }
 
         const wallet = { address: newAccount.address, network }
         selectedWalletStore.setItem("SELECTED_WALLET", wallet)

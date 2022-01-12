@@ -57,12 +57,15 @@ export class Wallet {
 
   public static async fromDeploy(networkId: string): Promise<Wallet> {
     sendMessage({ type: "NEW_ACCOUNT", data: networkId })
-    const deployTransaction = await waitForMessage("NEW_ACCOUNT_RES")
+    const result = await Promise.race([
+      waitForMessage("NEW_ACCOUNT_RES"),
+      waitForMessage("NEW_ACCOUNT_REJ"),
+    ])
 
-    return new Wallet(
-      deployTransaction.address,
-      networkId,
-      deployTransaction.txHash,
-    )
+    if (!result) {
+      throw new Error("Failed to deploy account")
+    }
+
+    return new Wallet(result.address, networkId, result.txHash)
   }
 }

@@ -56,6 +56,7 @@ export type MessageType =
       type: "NEW_ACCOUNT_RES"
       data: { txHash: string; address: string; wallets: BackupWallet[] }
     }
+  | { type: "NEW_ACCOUNT_REJ" }
   | { type: "REPORT_PROGRESS"; data: number }
   | { type: "HAS_SESSION" }
   | { type: "HAS_SESSION_RES"; data: boolean }
@@ -66,6 +67,9 @@ export type MessageType =
   | { type: "START_SESSION"; data: { secure: true; body: string } }
   | { type: "START_SESSION_REJ" }
   | { type: "START_SESSION_RES" }
+  | { type: "SET_LOCALHOST_PORT"; data: { port: number } }
+  | { type: "GET_LOCALHOST_PORT" }
+  | { type: "GET_LOCALHOST_PORT_RES"; data: { port: number } }
   | { type: "RECOVER_KEYSTORE"; data: string }
   | { type: "RECOVER_KEYSTORE_RES" }
   | { type: "ADD_SIGN"; data: typedData.TypedData }
